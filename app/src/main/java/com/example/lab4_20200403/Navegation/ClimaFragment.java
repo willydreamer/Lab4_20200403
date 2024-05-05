@@ -1,5 +1,12 @@
 package com.example.lab4_20200403.Navegation;
 
+import static android.content.Context.SENSOR_SERVICE;
+
+import android.content.Context;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 
 import androidx.fragment.app.Fragment;
@@ -32,7 +39,7 @@ import retrofit2.Response;
 import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
-public class ClimaFragment extends Fragment {
+public class ClimaFragment extends Fragment implements SensorEventListener {
     FragmentClimaBinding binding;
     ClimaService climaService;
     private String apikey = "792edf06f1f5ebcaf43632b55d8b03fe";
@@ -40,6 +47,13 @@ public class ClimaFragment extends Fragment {
     ClimaAdapter climaAdapter = new ClimaAdapter();
     //View Model
     private ClimaViewModel viewModel;
+
+    //Sensores
+    private SensorManager mSensorManager;
+    private Sensor magnetometro;
+    private float lastXMag = 0.0f;
+    private float lastYMag = 0.0f;
+
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
@@ -86,6 +100,11 @@ public class ClimaFragment extends Fragment {
             climaAdapter.notifyDataSetChanged();
         });
 
+        // Sensores
+
+        mSensorManager = (SensorManager) getActivity().getSystemService(Context.SENSOR_SERVICE);
+        magnetometro = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+
 
         return binding.getRoot();
     }
@@ -98,14 +117,27 @@ public class ClimaFragment extends Fragment {
                 .create(ClimaService.class);
     }
     void cargarClimaLugar(String lat,String lon, String appid){
+        // Se actualizan las variables del sensor :)
+        float xMag = lastXMag;
+        float yMag = lastYMag;
+        double degrees = Math.toDegrees(Math.atan2(yMag, xMag));
+        degrees = (degrees + 360) % 360;
+        String cardinalDirection = getCardinalDirection(degrees);
+        Log.d("Go bati", cardinalDirection);
+
         climaService.getClimaWithData(lat,lon,appid).enqueue(new Callback<LugarClima>() {
             @Override
             public void onResponse(Call<LugarClima> call, Response<LugarClima> response) {
                 if(response.isSuccessful()){
                     LugarClima place = response.body();
+
+                    // Setear la direccion del viento
+                    place.setDireccionViento(cardinalDirection);
+
                     //Verificacion de la solicitud
-                    Log.d("msg-test-ws-post","name: " + place.getName()
-                                + " | temperatura maxima: " + place.getMain().getTemp());
+                    Log.d("msg-test-ws-post", "name: " + place.getName() +
+                            " | temperatura maxima: " + place.getMain().getTemp() +
+                            " | dirección del viento: " + place.getDireccionViento());
 
                     lugaresClimas.add(place);
                     climaAdapter.setLugaresClima(lugaresClimas);
@@ -126,5 +158,57 @@ public class ClimaFragment extends Fragment {
         });
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        mSensorManager.registerListener(this, magnetometro, SensorManager.SENSOR_DELAY_NORMAL);
+    }
+
+    @Override
+    public void onStop(){
+        super.onStop();
+        SensorManager sensorManager = (SensorManager) requireActivity().getSystemService(SENSOR_SERVICE);
+        sensorManager.unregisterListener(this);
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        mSensorManager.unregisterListener(this);
+    }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        int sensorType = event.sensor.getType();
+        if (sensorType == Sensor.TYPE_MAGNETIC_FIELD) {
+            lastXMag = event.values[0];
+            lastYMag = event.values[1];
+        }
+    }
+
+    private String getCardinalDirection(double degrees) {
+        if (degrees >= 337.5 || degrees < 22.5)
+            return "Norte";
+        if (degrees >= 22.5 && degrees < 67.5)
+            return "Noreste";
+        if (degrees >= 67.5 && degrees < 112.5)
+            return "Este";
+        if (degrees >= 112.5 && degrees < 157.5)
+            return "Sureste";
+        if (degrees >= 157.5 && degrees < 202.5)
+            return "Sur";
+        if (degrees >= 202.5 && degrees < 247.5)
+            return "Suroeste";
+        if (degrees >= 247.5 && degrees < 292.5)
+            return "Oeste";
+        if (degrees >= 292.5 && degrees < 337.5)
+            return "Noroeste";
+        return "Indefinido";
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+    }
 
 }

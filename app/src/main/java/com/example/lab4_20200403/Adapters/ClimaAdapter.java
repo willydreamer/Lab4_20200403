@@ -38,7 +38,7 @@ public class ClimaAdapter extends RecyclerView.Adapter<ClimaAdapter.ClimaViewHol
         holder.tvtemp.setText(String.format("%s K", lugarClima.getMain().getTemp_min()));
         holder.tvtempMin.setText(String.format("%s K", lugarClima.getMain().getTemp_min()));
         holder.tvtempMax.setText(String.format("%s K", lugarClima.getMain().getTemp_max()));
-        holder.tvviento.setText("Viento: Oeste");
+        holder.tvviento.setText(String.format("Viento: %s ", lugarClima.getDireccionViento()));
     }
 
     @Override

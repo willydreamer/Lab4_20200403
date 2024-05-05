@@ -32,6 +32,7 @@ public class GeolocalizacionAdapter extends  RecyclerView.Adapter<Geolocalizacio
         holder.tvcity.setText(String.format(ciudadGeo.getName()));
         holder.tvlat.setText(String.format("Lat: " + ciudadGeo.getLat()));
         holder.tvlon.setText(String.format("Lon: " +  ciudadGeo.getLon()));
+
     }
 
     public void setCiudadesGeo(List<CiudadGeo> listaCiudadesGeo) {
